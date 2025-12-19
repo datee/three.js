@@ -1,0 +1,4 @@
+-cp src
+-main three.Examples
+-js bin/three.js
+-D js-es=6
