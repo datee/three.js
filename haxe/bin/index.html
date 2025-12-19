@@ -3,23 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.hx - Spinning Cube</title>
+    <title>Three.hx Examples</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e; 
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
         }
-        body {
-            overflow: hidden;
-            background: #1a1a2e;
+        h1 { margin-bottom: 2rem; }
+        .examples {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            max-width: 400px;
         }
-        canvas {
+        a {
             display: block;
+            padding: 1rem 2rem;
+            background: #16213e;
+            color: #4ecdc4;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: background 0.2s;
         }
+        a:hover { background: #1f3460; }
     </style>
 </head>
 <body>
-    <script src="three.js"></script>
+    <h1>Three.hx Examples</h1>
+    <div class="examples">
+        <a href="cube.html">Spinning Cube</a>
+        <a href="lights.html">Lights Demo</a>
+        <a href="grid.html">Cube Grid</a>
+        <a href="random.html">Random Cubes</a>
+    </div>
 </body>
 </html>

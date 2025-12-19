@@ -1,5 +1,5 @@
-# Compiled output
-bin/
+# Compiled JavaScript output
+bin/*.js
 
 # Lix/Haxe local config
 .haxerc
