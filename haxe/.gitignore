@@ -1,0 +1,6 @@
+# Compiled output
+bin/
+
+# Lix/Haxe local config
+.haxerc
+.haxelib/
