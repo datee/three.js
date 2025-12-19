@@ -42,7 +42,7 @@ class Camera extends Object3D
         return this;
     }
 
-    public function getWorldDirection(target:Vector3):Vector3
+    override public function getWorldDirection(target:Vector3):Vector3
     {
         updateMatrixWorld(true);
 

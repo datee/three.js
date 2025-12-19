@@ -5,8 +5,8 @@ package three.math;
  */
 class MathUtils
 {
-    public static inline var DEG2RAD:Float = Math.PI / 180.0;
-    public static inline var RAD2DEG:Float = 180.0 / Math.PI;
+    public static var DEG2RAD:Float = 0.017453292519943295; // Math.PI / 180
+    public static var RAD2DEG:Float = 57.29577951308232; // 180 / Math.PI
 
     private static var _lut:Array<String> = null;
 

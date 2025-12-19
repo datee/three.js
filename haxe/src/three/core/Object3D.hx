@@ -6,7 +6,7 @@ import three.math.Matrix4;
 import three.math.Matrix3;
 import three.math.Quaternion;
 import three.math.Euler;
-import three.math.EulerOrder;
+import three.math.Euler.EulerOrder;
 import three.math.MathUtils;
 
 /**

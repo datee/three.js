@@ -1,5 +1,7 @@
 package three.math;
 
+import three.math.Euler.EulerOrder;
+
 /**
  * A 4x4 matrix (column-major order)
  */
@@ -363,7 +365,7 @@ class Matrix4
 
         return (
             n41 * (
-                +n14 * n23 * n32
+                n14 * n23 * n32
                 - n13 * n24 * n32
                 - n14 * n22 * n33
                 + n12 * n24 * n33
@@ -371,7 +373,7 @@ class Matrix4
                 - n12 * n23 * n34
             ) +
             n42 * (
-                +n11 * n23 * n34
+                n11 * n23 * n34
                 - n11 * n24 * n33
                 + n14 * n21 * n33
                 - n13 * n21 * n34
@@ -379,7 +381,7 @@ class Matrix4
                 - n14 * n23 * n31
             ) +
             n43 * (
-                +n11 * n24 * n32
+                n11 * n24 * n32
                 - n11 * n22 * n34
                 - n14 * n21 * n32
                 + n12 * n21 * n34

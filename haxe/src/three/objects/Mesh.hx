@@ -5,6 +5,7 @@ import three.core.BufferGeometry;
 import three.materials.Material;
 import three.math.Vector3;
 import three.math.Matrix4;
+import three.materials.MeshBasicMaterial;
 
 /**
  * Class representing triangular polygon mesh based objects.
@@ -81,6 +82,3 @@ class Mesh extends Object3D
         return target;
     }
 }
-
-// Import for default material
-import three.materials.MeshBasicMaterial;

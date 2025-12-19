@@ -132,14 +132,13 @@ class WebGLRenderer
         }
 
         // Get WebGL context
-        var contextAttributes = {
+        var contextAttributes:js.html.webgl.ContextAttributes = {
             alpha: parameters.alpha != null ? parameters.alpha : false,
             depth: parameters.depth != null ? parameters.depth : true,
             stencil: parameters.stencil != null ? parameters.stencil : false,
             antialias: parameters.antialias != null ? parameters.antialias : false,
             premultipliedAlpha: parameters.premultipliedAlpha != null ? parameters.premultipliedAlpha : true,
-            preserveDrawingBuffer: parameters.preserveDrawingBuffer != null ? parameters.preserveDrawingBuffer : false,
-            powerPreference: parameters.powerPreference != null ? parameters.powerPreference : "default"
+            preserveDrawingBuffer: parameters.preserveDrawingBuffer != null ? parameters.preserveDrawingBuffer : false
         };
 
         gl = domElement.getContextWebGL(contextAttributes);

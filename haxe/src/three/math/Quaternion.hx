@@ -1,6 +1,7 @@
 package three.math;
 
 import three.math.MathUtils;
+import three.math.Euler.EulerOrder;
 
 /**
  * Quaternion representing a rotation
@@ -68,43 +69,48 @@ class Quaternion
         var s2 = Math.sin(ey / 2);
         var s3 = Math.sin(ez / 2);
 
-        switch (order)
+        var orderStr:String = order;
+        if (orderStr == "XYZ")
         {
-            case EulerOrder.XYZ:
-                x = s1 * c2 * c3 + c1 * s2 * s3;
-                y = c1 * s2 * c3 - s1 * c2 * s3;
-                z = c1 * c2 * s3 + s1 * s2 * c3;
-                w = c1 * c2 * c3 - s1 * s2 * s3;
-
-            case EulerOrder.YXZ:
-                x = s1 * c2 * c3 + c1 * s2 * s3;
-                y = c1 * s2 * c3 - s1 * c2 * s3;
-                z = c1 * c2 * s3 - s1 * s2 * c3;
-                w = c1 * c2 * c3 + s1 * s2 * s3;
-
-            case EulerOrder.ZXY:
-                x = s1 * c2 * c3 - c1 * s2 * s3;
-                y = c1 * s2 * c3 + s1 * c2 * s3;
-                z = c1 * c2 * s3 + s1 * s2 * c3;
-                w = c1 * c2 * c3 - s1 * s2 * s3;
-
-            case EulerOrder.ZYX:
-                x = s1 * c2 * c3 - c1 * s2 * s3;
-                y = c1 * s2 * c3 + s1 * c2 * s3;
-                z = c1 * c2 * s3 - s1 * s2 * c3;
-                w = c1 * c2 * c3 + s1 * s2 * s3;
-
-            case EulerOrder.YZX:
-                x = s1 * c2 * c3 + c1 * s2 * s3;
-                y = c1 * s2 * c3 + s1 * c2 * s3;
-                z = c1 * c2 * s3 - s1 * s2 * c3;
-                w = c1 * c2 * c3 - s1 * s2 * s3;
-
-            case EulerOrder.XZY:
-                x = s1 * c2 * c3 - c1 * s2 * s3;
-                y = c1 * s2 * c3 - s1 * c2 * s3;
-                z = c1 * c2 * s3 + s1 * s2 * c3;
-                w = c1 * c2 * c3 + s1 * s2 * s3;
+            x = s1 * c2 * c3 + c1 * s2 * s3;
+            y = c1 * s2 * c3 - s1 * c2 * s3;
+            z = c1 * c2 * s3 + s1 * s2 * c3;
+            w = c1 * c2 * c3 - s1 * s2 * s3;
+        }
+        else if (orderStr == "YXZ")
+        {
+            x = s1 * c2 * c3 + c1 * s2 * s3;
+            y = c1 * s2 * c3 - s1 * c2 * s3;
+            z = c1 * c2 * s3 - s1 * s2 * c3;
+            w = c1 * c2 * c3 + s1 * s2 * s3;
+        }
+        else if (orderStr == "ZXY")
+        {
+            x = s1 * c2 * c3 - c1 * s2 * s3;
+            y = c1 * s2 * c3 + s1 * c2 * s3;
+            z = c1 * c2 * s3 + s1 * s2 * c3;
+            w = c1 * c2 * c3 - s1 * s2 * s3;
+        }
+        else if (orderStr == "ZYX")
+        {
+            x = s1 * c2 * c3 - c1 * s2 * s3;
+            y = c1 * s2 * c3 + s1 * c2 * s3;
+            z = c1 * c2 * s3 - s1 * s2 * c3;
+            w = c1 * c2 * c3 + s1 * s2 * s3;
+        }
+        else if (orderStr == "YZX")
+        {
+            x = s1 * c2 * c3 + c1 * s2 * s3;
+            y = c1 * s2 * c3 + s1 * c2 * s3;
+            z = c1 * c2 * s3 - s1 * s2 * c3;
+            w = c1 * c2 * c3 - s1 * s2 * s3;
+        }
+        else if (orderStr == "XZY")
+        {
+            x = s1 * c2 * c3 - c1 * s2 * s3;
+            y = c1 * s2 * c3 - s1 * c2 * s3;
+            z = c1 * c2 * s3 + s1 * s2 * c3;
+            w = c1 * c2 * c3 + s1 * s2 * s3;
         }
 
         if (update) onChangeCallback();
