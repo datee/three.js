@@ -1,0 +1,22 @@
+# Three.hx Examples Build Configuration
+# Compiles all examples to JavaScript
+
+-cp src
+-D js-es=6
+
+# Build all examples
+--each
+-main three.examples.GeometryCube
+-js bin/cube.js
+
+--next
+-main three.examples.Lights
+-js bin/lights.js
+
+--next
+-main three.examples.CubeGrid
+-js bin/grid.js
+
+--next
+-main three.examples.RandomCubes
+-js bin/random.js
