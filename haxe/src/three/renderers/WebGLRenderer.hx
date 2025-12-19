@@ -13,6 +13,12 @@ import three.core.BufferAttribute;
 import three.objects.Mesh;
 import three.materials.Material;
 import three.materials.MeshBasicMaterial;
+import three.materials.MeshLambertMaterial;
+import three.materials.MeshPhongMaterial;
+import three.lights.Light;
+import three.lights.AmbientLight;
+import three.lights.DirectionalLight;
+import three.lights.PointLight;
 
 #if js
 import js.Browser;
@@ -77,6 +83,11 @@ class WebGLRenderer
     private var _projScreenMatrix:Matrix4;
     private var _vector3:Vector3;
 
+    // Light state
+    private var _ambientLight:Color;
+    private var _directionalLights:Array<DirectionalLightData>;
+    private var _pointLights:Array<PointLightData>;
+
     public var isWebGLRenderer(default, never):Bool = true;
 
     public function new(?parameters:WebGLRendererParameters)
@@ -102,6 +113,11 @@ class WebGLRenderer
 
         _projScreenMatrix = new Matrix4();
         _vector3 = new Vector3();
+
+        // Initialize light storage
+        _ambientLight = new Color(0x000000);
+        _directionalLights = [];
+        _pointLights = [];
 
         #if js
         // Create or use provided canvas
@@ -250,6 +266,9 @@ class WebGLRenderer
         // Compute projection-view matrix
         _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
 
+        // Collect lights from scene
+        collectLights(scene);
+
         // Clear if needed
         if (autoClear)
         {
@@ -262,6 +281,64 @@ class WebGLRenderer
     }
 
     #if js
+    private function collectLights(scene:Scene):Void
+    {
+        // Reset light state
+        _ambientLight.setRGB(0, 0, 0);
+        _directionalLights = [];
+        _pointLights = [];
+
+        // Traverse scene to collect lights
+        collectLightsFromObject(scene);
+    }
+
+    private function collectLightsFromObject(object:Object3D):Void
+    {
+        if (Std.isOfType(object, AmbientLight))
+        {
+            var light:AmbientLight = cast object;
+            _ambientLight.r += light.color.r * light.intensity;
+            _ambientLight.g += light.color.g * light.intensity;
+            _ambientLight.b += light.color.b * light.intensity;
+        }
+        else if (Std.isOfType(object, DirectionalLight))
+        {
+            var light:DirectionalLight = cast object;
+            var direction = new Vector3();
+            direction.setFromMatrixPosition(light.matrixWorld);
+            var targetPos = new Vector3();
+            targetPos.setFromMatrixPosition(light.target.matrixWorld);
+            direction.sub(targetPos);
+            direction.normalize();
+
+            _directionalLights.push({
+                color: light.color,
+                intensity: light.intensity,
+                direction: direction
+            });
+        }
+        else if (Std.isOfType(object, PointLight))
+        {
+            var light:PointLight = cast object;
+            var position = new Vector3();
+            position.setFromMatrixPosition(light.matrixWorld);
+
+            _pointLights.push({
+                color: light.color,
+                intensity: light.intensity,
+                position: position,
+                distance: light.distance,
+                decay: light.decay
+            });
+        }
+
+        // Recurse to children
+        for (child in object.children)
+        {
+            collectLightsFromObject(child);
+        }
+    }
+
     private function renderObjects(objects:Array<Object3D>, scene:Scene, camera:Camera):Void
     {
         for (object in objects)
@@ -284,7 +361,7 @@ class WebGLRenderer
     private function renderMesh(mesh:Mesh, scene:Scene, camera:Camera):Void
     {
         var geometry = mesh.geometry;
-        var material:MeshBasicMaterial = cast mesh.material;
+        var material = mesh.material;
 
         if (geometry == null || material == null) return;
 
@@ -292,32 +369,56 @@ class WebGLRenderer
         mesh.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse, mesh.matrixWorld);
         mesh.normalMatrix.getNormalMatrix(mesh.modelViewMatrix);
 
-        // Get or create program
-        var program = getProgram(material);
+        // Determine material type and get program
+        var programKey = getMaterialKey(material);
+        var program = getProgram(programKey);
         gl.useProgram(program.program);
 
-        // Set uniforms
+        // Set common uniforms
         var mvpMatrix = new Matrix4();
         mvpMatrix.multiplyMatrices(_projScreenMatrix, mesh.matrixWorld);
-
         gl.uniformMatrix4fv(program.uniforms.get("uMVPMatrix"), false, new js.lib.Float32Array(mvpMatrix.elements));
-        gl.uniform3f(program.uniforms.get("uColor"), material.color.r, material.color.g, material.color.b);
-        gl.uniform1f(program.uniforms.get("uOpacity"), material.opacity);
+
+        // Set material-specific uniforms
+        if (Std.isOfType(material, MeshPhongMaterial))
+        {
+            var phongMat:MeshPhongMaterial = cast material;
+            setPhongUniforms(program, phongMat, mesh, camera);
+        }
+        else if (Std.isOfType(material, MeshLambertMaterial))
+        {
+            var lambertMat:MeshLambertMaterial = cast material;
+            setLambertUniforms(program, lambertMat, mesh, camera);
+        }
+        else if (Std.isOfType(material, MeshBasicMaterial))
+        {
+            var basicMat:MeshBasicMaterial = cast material;
+            gl.uniform3f(program.uniforms.get("uColor"), basicMat.color.r, basicMat.color.g, basicMat.color.b);
+            gl.uniform1f(program.uniforms.get("uOpacity"), basicMat.opacity);
+        }
 
         // Get or create buffers
         var buffers = getGeometryBuffers(geometry);
 
         // Bind position buffer
         gl.bindBuffer(GL.ARRAY_BUFFER, buffers.position);
-        gl.enableVertexAttribArray(program.attributes.get("aPosition"));
-        gl.vertexAttribPointer(program.attributes.get("aPosition"), 3, GL.FLOAT, false, 0, 0);
+        var posLoc = program.attributes.get("aPosition");
+        if (posLoc >= 0)
+        {
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 3, GL.FLOAT, false, 0, 0);
+        }
 
         // Bind normal buffer if exists
-        if (buffers.normal != null && program.attributes.exists("aNormal"))
+        if (buffers.normal != null)
         {
-            gl.bindBuffer(GL.ARRAY_BUFFER, buffers.normal);
-            gl.enableVertexAttribArray(program.attributes.get("aNormal"));
-            gl.vertexAttribPointer(program.attributes.get("aNormal"), 3, GL.FLOAT, false, 0, 0);
+            var normalLoc = program.attributes.get("aNormal");
+            if (normalLoc >= 0)
+            {
+                gl.bindBuffer(GL.ARRAY_BUFFER, buffers.normal);
+                gl.enableVertexAttribArray(normalLoc);
+                gl.vertexAttribPointer(normalLoc, 3, GL.FLOAT, false, 0, 0);
+            }
         }
 
         // Draw
@@ -332,17 +433,184 @@ class WebGLRenderer
         }
     }
 
-    private function getProgram(material:MeshBasicMaterial):ProgramInfo
+    private function setPhongUniforms(program:ProgramInfo, material:MeshPhongMaterial, mesh:Mesh, camera:Camera):Void
     {
-        var key = "basic";
+        // Colors
+        gl.uniform3f(program.uniforms.get("uColor"), material.color.r, material.color.g, material.color.b);
+        gl.uniform3f(program.uniforms.get("uSpecular"), material.specular.r, material.specular.g, material.specular.b);
+        gl.uniform1f(program.uniforms.get("uShininess"), material.shininess);
+        gl.uniform3f(program.uniforms.get("uEmissive"),
+            material.emissive.r * material.emissiveIntensity,
+            material.emissive.g * material.emissiveIntensity,
+            material.emissive.b * material.emissiveIntensity);
+        gl.uniform1f(program.uniforms.get("uOpacity"), material.opacity);
 
+        // Matrices
+        gl.uniformMatrix4fv(program.uniforms.get("uModelViewMatrix"), false, new js.lib.Float32Array(mesh.modelViewMatrix.elements));
+        gl.uniformMatrix3fv(program.uniforms.get("uNormalMatrix"), false, new js.lib.Float32Array(mesh.normalMatrix.elements));
+
+        // Camera position
+        var camPos = new Vector3();
+        camPos.setFromMatrixPosition(camera.matrixWorld);
+        gl.uniform3f(program.uniforms.get("uCameraPosition"), camPos.x, camPos.y, camPos.z);
+
+        // Lights
+        setLightUniforms(program);
+    }
+
+    private function setLambertUniforms(program:ProgramInfo, material:MeshLambertMaterial, mesh:Mesh, camera:Camera):Void
+    {
+        // Colors
+        gl.uniform3f(program.uniforms.get("uColor"), material.color.r, material.color.g, material.color.b);
+        gl.uniform3f(program.uniforms.get("uEmissive"),
+            material.emissive.r * material.emissiveIntensity,
+            material.emissive.g * material.emissiveIntensity,
+            material.emissive.b * material.emissiveIntensity);
+        gl.uniform1f(program.uniforms.get("uOpacity"), material.opacity);
+
+        // Matrices
+        gl.uniformMatrix4fv(program.uniforms.get("uModelViewMatrix"), false, new js.lib.Float32Array(mesh.modelViewMatrix.elements));
+        gl.uniformMatrix3fv(program.uniforms.get("uNormalMatrix"), false, new js.lib.Float32Array(mesh.normalMatrix.elements));
+
+        // Lights
+        setLightUniforms(program);
+    }
+
+    private function setLightUniforms(program:ProgramInfo):Void
+    {
+        // Ambient light
+        gl.uniform3f(program.uniforms.get("uAmbientLight"), _ambientLight.r, _ambientLight.g, _ambientLight.b);
+
+        // Number of lights
+        gl.uniform1i(program.uniforms.get("uNumDirectionalLights"), _directionalLights.length);
+        gl.uniform1i(program.uniforms.get("uNumPointLights"), _pointLights.length);
+
+        // Directional lights (up to 4)
+        for (i in 0...4)
+        {
+            if (i < _directionalLights.length)
+            {
+                var light = _directionalLights[i];
+                gl.uniform3f(program.uniforms.get("uDirectionalLights[" + i + "].direction"),
+                    light.direction.x, light.direction.y, light.direction.z);
+                gl.uniform3f(program.uniforms.get("uDirectionalLights[" + i + "].color"),
+                    light.color.r * light.intensity,
+                    light.color.g * light.intensity,
+                    light.color.b * light.intensity);
+            }
+        }
+
+        // Point lights (up to 4)
+        for (i in 0...4)
+        {
+            if (i < _pointLights.length)
+            {
+                var light = _pointLights[i];
+                gl.uniform3f(program.uniforms.get("uPointLights[" + i + "].position"),
+                    light.position.x, light.position.y, light.position.z);
+                gl.uniform3f(program.uniforms.get("uPointLights[" + i + "].color"),
+                    light.color.r * light.intensity,
+                    light.color.g * light.intensity,
+                    light.color.b * light.intensity);
+                gl.uniform1f(program.uniforms.get("uPointLights[" + i + "].distance"), light.distance);
+                gl.uniform1f(program.uniforms.get("uPointLights[" + i + "].decay"), light.decay);
+            }
+        }
+    }
+
+    private function getMaterialKey(material:Material):String
+    {
+        if (Std.isOfType(material, MeshPhongMaterial)) return "phong";
+        if (Std.isOfType(material, MeshLambertMaterial)) return "lambert";
+        return "basic";
+    }
+
+    private function getProgram(key:String):ProgramInfo
+    {
         if (_programs.exists(key))
         {
             return _programs.get(key);
         }
 
-        // Vertex shader
-        var vertexShader = "
+        var vertexShader:String;
+        var fragmentShader:String;
+
+        switch (key)
+        {
+            case "phong":
+                vertexShader = getPhongVertexShader();
+                fragmentShader = getPhongFragmentShader();
+            case "lambert":
+                vertexShader = getLambertVertexShader();
+                fragmentShader = getLambertFragmentShader();
+            default:
+                vertexShader = getBasicVertexShader();
+                fragmentShader = getBasicFragmentShader();
+        }
+
+        var program = createProgram(vertexShader, fragmentShader);
+
+        var programInfo:ProgramInfo = {
+            program: program,
+            attributes: new Map(),
+            uniforms: new Map()
+        };
+
+        // Get common attribute locations
+        programInfo.attributes.set("aPosition", gl.getAttribLocation(program, "aPosition"));
+        programInfo.attributes.set("aNormal", gl.getAttribLocation(program, "aNormal"));
+
+        // Get uniform locations based on shader type
+        programInfo.uniforms.set("uMVPMatrix", gl.getUniformLocation(program, "uMVPMatrix"));
+        programInfo.uniforms.set("uColor", gl.getUniformLocation(program, "uColor"));
+        programInfo.uniforms.set("uOpacity", gl.getUniformLocation(program, "uOpacity"));
+
+        if (key == "phong" || key == "lambert")
+        {
+            programInfo.uniforms.set("uModelViewMatrix", gl.getUniformLocation(program, "uModelViewMatrix"));
+            programInfo.uniforms.set("uNormalMatrix", gl.getUniformLocation(program, "uNormalMatrix"));
+            programInfo.uniforms.set("uEmissive", gl.getUniformLocation(program, "uEmissive"));
+            programInfo.uniforms.set("uAmbientLight", gl.getUniformLocation(program, "uAmbientLight"));
+            programInfo.uniforms.set("uNumDirectionalLights", gl.getUniformLocation(program, "uNumDirectionalLights"));
+            programInfo.uniforms.set("uNumPointLights", gl.getUniformLocation(program, "uNumPointLights"));
+
+            // Directional light uniforms
+            for (i in 0...4)
+            {
+                programInfo.uniforms.set("uDirectionalLights[" + i + "].direction",
+                    gl.getUniformLocation(program, "uDirectionalLights[" + i + "].direction"));
+                programInfo.uniforms.set("uDirectionalLights[" + i + "].color",
+                    gl.getUniformLocation(program, "uDirectionalLights[" + i + "].color"));
+            }
+
+            // Point light uniforms
+            for (i in 0...4)
+            {
+                programInfo.uniforms.set("uPointLights[" + i + "].position",
+                    gl.getUniformLocation(program, "uPointLights[" + i + "].position"));
+                programInfo.uniforms.set("uPointLights[" + i + "].color",
+                    gl.getUniformLocation(program, "uPointLights[" + i + "].color"));
+                programInfo.uniforms.set("uPointLights[" + i + "].distance",
+                    gl.getUniformLocation(program, "uPointLights[" + i + "].distance"));
+                programInfo.uniforms.set("uPointLights[" + i + "].decay",
+                    gl.getUniformLocation(program, "uPointLights[" + i + "].decay"));
+            }
+        }
+
+        if (key == "phong")
+        {
+            programInfo.uniforms.set("uSpecular", gl.getUniformLocation(program, "uSpecular"));
+            programInfo.uniforms.set("uShininess", gl.getUniformLocation(program, "uShininess"));
+            programInfo.uniforms.set("uCameraPosition", gl.getUniformLocation(program, "uCameraPosition"));
+        }
+
+        _programs.set(key, programInfo);
+        return programInfo;
+    }
+
+    private function getBasicVertexShader():String
+    {
+        return "
             attribute vec3 aPosition;
             attribute vec3 aNormal;
             uniform mat4 uMVPMatrix;
@@ -352,9 +620,11 @@ class WebGLRenderer
                 gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
             }
         ";
+    }
 
-        // Fragment shader
-        var fragmentShader = "
+    private function getBasicFragmentShader():String
+    {
+        return "
             precision mediump float;
             uniform vec3 uColor;
             uniform float uOpacity;
@@ -365,26 +635,209 @@ class WebGLRenderer
                 gl_FragColor = vec4(uColor * diffuse, uOpacity);
             }
         ";
+    }
 
-        var program = createProgram(vertexShader, fragmentShader);
+    private function getLambertVertexShader():String
+    {
+        return "
+            attribute vec3 aPosition;
+            attribute vec3 aNormal;
+            uniform mat4 uMVPMatrix;
+            uniform mat4 uModelViewMatrix;
+            uniform mat3 uNormalMatrix;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            void main() {
+                vec4 mvPosition = uModelViewMatrix * vec4(aPosition, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                vNormal = normalize(uNormalMatrix * aNormal);
+                gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
+            }
+        ";
+    }
 
-        var programInfo:ProgramInfo = {
-            program: program,
-            attributes: new Map(),
-            uniforms: new Map()
-        };
+    private function getLambertFragmentShader():String
+    {
+        return "
+            precision mediump float;
 
-        // Get attribute locations
-        programInfo.attributes.set("aPosition", gl.getAttribLocation(program, "aPosition"));
-        programInfo.attributes.set("aNormal", gl.getAttribLocation(program, "aNormal"));
+            uniform vec3 uColor;
+            uniform vec3 uEmissive;
+            uniform float uOpacity;
+            uniform vec3 uAmbientLight;
 
-        // Get uniform locations
-        programInfo.uniforms.set("uMVPMatrix", gl.getUniformLocation(program, "uMVPMatrix"));
-        programInfo.uniforms.set("uColor", gl.getUniformLocation(program, "uColor"));
-        programInfo.uniforms.set("uOpacity", gl.getUniformLocation(program, "uOpacity"));
+            uniform int uNumDirectionalLights;
+            uniform int uNumPointLights;
 
-        _programs.set(key, programInfo);
-        return programInfo;
+            struct DirectionalLight {
+                vec3 direction;
+                vec3 color;
+            };
+            uniform DirectionalLight uDirectionalLights[4];
+
+            struct PointLight {
+                vec3 position;
+                vec3 color;
+                float distance;
+                float decay;
+            };
+            uniform PointLight uPointLights[4];
+
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 diffuseColor = uColor;
+
+                // Start with ambient and emissive
+                vec3 outgoingLight = uEmissive + diffuseColor * uAmbientLight;
+
+                // Add directional lights
+                for (int i = 0; i < 4; i++) {
+                    if (i >= uNumDirectionalLights) break;
+                    vec3 lightDir = normalize(uDirectionalLights[i].direction);
+                    float dotNL = max(dot(normal, lightDir), 0.0);
+                    outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
+                }
+
+                // Add point lights
+                for (int i = 0; i < 4; i++) {
+                    if (i >= uNumPointLights) break;
+                    vec3 lightVector = uPointLights[i].position + vViewPosition;
+                    float lightDistance = length(lightVector);
+                    vec3 lightDir = normalize(lightVector);
+
+                    float dotNL = max(dot(normal, lightDir), 0.0);
+
+                    // Attenuation
+                    float attenuation = 1.0;
+                    if (uPointLights[i].distance > 0.0) {
+                        float distanceFactor = lightDistance / uPointLights[i].distance;
+                        attenuation = max(1.0 - distanceFactor, 0.0);
+                        attenuation *= attenuation;
+                    }
+
+                    outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
+                }
+
+                gl_FragColor = vec4(outgoingLight, uOpacity);
+            }
+        ";
+    }
+
+    private function getPhongVertexShader():String
+    {
+        return "
+            attribute vec3 aPosition;
+            attribute vec3 aNormal;
+            uniform mat4 uMVPMatrix;
+            uniform mat4 uModelViewMatrix;
+            uniform mat3 uNormalMatrix;
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 mvPosition = uModelViewMatrix * vec4(aPosition, 1.0);
+                vViewPosition = -mvPosition.xyz;
+                vNormal = normalize(uNormalMatrix * aNormal);
+                vWorldPosition = aPosition;
+                gl_Position = uMVPMatrix * vec4(aPosition, 1.0);
+            }
+        ";
+    }
+
+    private function getPhongFragmentShader():String
+    {
+        return "
+            precision mediump float;
+
+            uniform vec3 uColor;
+            uniform vec3 uSpecular;
+            uniform float uShininess;
+            uniform vec3 uEmissive;
+            uniform float uOpacity;
+            uniform vec3 uAmbientLight;
+            uniform vec3 uCameraPosition;
+
+            uniform int uNumDirectionalLights;
+            uniform int uNumPointLights;
+
+            struct DirectionalLight {
+                vec3 direction;
+                vec3 color;
+            };
+            uniform DirectionalLight uDirectionalLights[4];
+
+            struct PointLight {
+                vec3 position;
+                vec3 color;
+                float distance;
+                float decay;
+            };
+            uniform PointLight uPointLights[4];
+
+            varying vec3 vNormal;
+            varying vec3 vViewPosition;
+            varying vec3 vWorldPosition;
+
+            void main() {
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(vViewPosition);
+                vec3 diffuseColor = uColor;
+
+                // Start with ambient and emissive
+                vec3 outgoingLight = uEmissive + diffuseColor * uAmbientLight;
+                vec3 specularSum = vec3(0.0);
+
+                // Add directional lights
+                for (int i = 0; i < 4; i++) {
+                    if (i >= uNumDirectionalLights) break;
+                    vec3 lightDir = normalize(uDirectionalLights[i].direction);
+
+                    // Diffuse
+                    float dotNL = max(dot(normal, lightDir), 0.0);
+                    outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
+
+                    // Specular (Blinn-Phong)
+                    vec3 halfDir = normalize(lightDir + viewDir);
+                    float dotNH = max(dot(normal, halfDir), 0.0);
+                    float specularFactor = pow(dotNH, uShininess);
+                    specularSum += uSpecular * uDirectionalLights[i].color * specularFactor * dotNL;
+                }
+
+                // Add point lights
+                for (int i = 0; i < 4; i++) {
+                    if (i >= uNumPointLights) break;
+                    vec3 lightVector = uPointLights[i].position + vViewPosition;
+                    float lightDistance = length(lightVector);
+                    vec3 lightDir = normalize(lightVector);
+
+                    float dotNL = max(dot(normal, lightDir), 0.0);
+
+                    // Attenuation
+                    float attenuation = 1.0;
+                    if (uPointLights[i].distance > 0.0) {
+                        float distanceFactor = lightDistance / uPointLights[i].distance;
+                        attenuation = max(1.0 - distanceFactor, 0.0);
+                        attenuation *= attenuation;
+                    }
+
+                    // Diffuse
+                    outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
+
+                    // Specular (Blinn-Phong)
+                    vec3 halfDir = normalize(lightDir + viewDir);
+                    float dotNH = max(dot(normal, halfDir), 0.0);
+                    float specularFactor = pow(dotNH, uShininess);
+                    specularSum += uSpecular * uPointLights[i].color * specularFactor * dotNL * attenuation;
+                }
+
+                outgoingLight += specularSum;
+
+                gl_FragColor = vec4(outgoingLight, uOpacity);
+            }
+        ";
     }
 
     private function createProgram(vertexSource:String, fragmentSource:String):Program
@@ -521,5 +974,21 @@ private typedef GeometryBuffers =
     var index:Buffer;
     var vertexCount:Int;
     var indexCount:Int;
+}
+
+private typedef DirectionalLightData =
+{
+    var color:Color;
+    var intensity:Float;
+    var direction:Vector3;
+}
+
+private typedef PointLightData =
+{
+    var color:Color;
+    var intensity:Float;
+    var position:Vector3;
+    var distance:Float;
+    var decay:Float;
 }
 #end
