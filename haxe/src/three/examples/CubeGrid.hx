@@ -47,14 +47,14 @@ class CubeGrid
     #if js
     static function init():Void
     {
+        // Scene (must be created first for lookAt)
+        scene = new Scene();
+        scene.background = new Color(0x111122);
+
         // Camera
         camera = new PerspectiveCamera(60, Browser.window.innerWidth / Browser.window.innerHeight, 0.1, 1000);
         camera.position.set(15, 15, 15);
         camera.lookAtVector(scene.position);
-
-        // Scene
-        scene = new Scene();
-        scene.background = new Color(0x111122);
 
         // Geometry (shared by all cubes)
         var geometry = new BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
