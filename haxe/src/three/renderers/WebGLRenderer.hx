@@ -303,6 +303,10 @@ class WebGLRenderer
         else if (Std.isOfType(object, DirectionalLight))
         {
             var light:DirectionalLight = cast object;
+
+            // Update target's matrix (it's not in the scene graph)
+            light.target.updateMatrixWorld();
+
             var direction = new Vector3();
             direction.setFromMatrixPosition(light.matrixWorld);
             var targetPos = new Vector3();

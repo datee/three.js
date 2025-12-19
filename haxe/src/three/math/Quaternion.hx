@@ -8,10 +8,16 @@ import three.math.Euler.EulerOrder;
  */
 class Quaternion
 {
-    public var x:Float;
-    public var y:Float;
-    public var z:Float;
-    public var w:Float;
+    // Use backing fields for x, y, z, w with getters/setters to trigger onChange
+    private var _x:Float;
+    private var _y:Float;
+    private var _z:Float;
+    private var _w:Float;
+
+    public var x(get, set):Float;
+    public var y(get, set):Float;
+    public var z(get, set):Float;
+    public var w(get, set):Float;
 
     public var isQuaternion(default, never):Bool = true;
 
@@ -19,18 +25,67 @@ class Quaternion
 
     public function new(x:Float = 0, y:Float = 0, z:Float = 0, w:Float = 1)
     {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.w = w;
+        _x = x;
+        _y = y;
+        _z = z;
+        _w = w;
+    }
+
+    // Property getters and setters
+    private function get_x():Float
+    {
+        return _x;
+    }
+
+    private function set_x(value:Float):Float
+    {
+        _x = value;
+        onChangeCallback();
+        return _x;
+    }
+
+    private function get_y():Float
+    {
+        return _y;
+    }
+
+    private function set_y(value:Float):Float
+    {
+        _y = value;
+        onChangeCallback();
+        return _y;
+    }
+
+    private function get_z():Float
+    {
+        return _z;
+    }
+
+    private function set_z(value:Float):Float
+    {
+        _z = value;
+        onChangeCallback();
+        return _z;
+    }
+
+    private function get_w():Float
+    {
+        return _w;
+    }
+
+    private function set_w(value:Float):Float
+    {
+        _w = value;
+        onChangeCallback();
+        return _w;
     }
 
     public function set(x:Float, y:Float, z:Float, w:Float):Quaternion
     {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.w = w;
+        _x = x;
+        _y = y;
+        _z = z;
+        _w = w;
 
         onChangeCallback();
 
@@ -39,15 +94,15 @@ class Quaternion
 
     public function clone():Quaternion
     {
-        return new Quaternion(x, y, z, w);
+        return new Quaternion(_x, _y, _z, _w);
     }
 
     public function copy(q:Quaternion):Quaternion
     {
-        x = q.x;
-        y = q.y;
-        z = q.z;
-        w = q.w;
+        _x = q._x;
+        _y = q._y;
+        _z = q._z;
+        _w = q._w;
 
         onChangeCallback();
 
@@ -72,45 +127,45 @@ class Quaternion
         var orderStr:String = order;
         if (orderStr == "XYZ")
         {
-            x = s1 * c2 * c3 + c1 * s2 * s3;
-            y = c1 * s2 * c3 - s1 * c2 * s3;
-            z = c1 * c2 * s3 + s1 * s2 * c3;
-            w = c1 * c2 * c3 - s1 * s2 * s3;
+            _x = s1 * c2 * c3 + c1 * s2 * s3;
+            _y = c1 * s2 * c3 - s1 * c2 * s3;
+            _z = c1 * c2 * s3 + s1 * s2 * c3;
+            _w = c1 * c2 * c3 - s1 * s2 * s3;
         }
         else if (orderStr == "YXZ")
         {
-            x = s1 * c2 * c3 + c1 * s2 * s3;
-            y = c1 * s2 * c3 - s1 * c2 * s3;
-            z = c1 * c2 * s3 - s1 * s2 * c3;
-            w = c1 * c2 * c3 + s1 * s2 * s3;
+            _x = s1 * c2 * c3 + c1 * s2 * s3;
+            _y = c1 * s2 * c3 - s1 * c2 * s3;
+            _z = c1 * c2 * s3 - s1 * s2 * c3;
+            _w = c1 * c2 * c3 + s1 * s2 * s3;
         }
         else if (orderStr == "ZXY")
         {
-            x = s1 * c2 * c3 - c1 * s2 * s3;
-            y = c1 * s2 * c3 + s1 * c2 * s3;
-            z = c1 * c2 * s3 + s1 * s2 * c3;
-            w = c1 * c2 * c3 - s1 * s2 * s3;
+            _x = s1 * c2 * c3 - c1 * s2 * s3;
+            _y = c1 * s2 * c3 + s1 * c2 * s3;
+            _z = c1 * c2 * s3 + s1 * s2 * c3;
+            _w = c1 * c2 * c3 - s1 * s2 * s3;
         }
         else if (orderStr == "ZYX")
         {
-            x = s1 * c2 * c3 - c1 * s2 * s3;
-            y = c1 * s2 * c3 + s1 * c2 * s3;
-            z = c1 * c2 * s3 - s1 * s2 * c3;
-            w = c1 * c2 * c3 + s1 * s2 * s3;
+            _x = s1 * c2 * c3 - c1 * s2 * s3;
+            _y = c1 * s2 * c3 + s1 * c2 * s3;
+            _z = c1 * c2 * s3 - s1 * s2 * c3;
+            _w = c1 * c2 * c3 + s1 * s2 * s3;
         }
         else if (orderStr == "YZX")
         {
-            x = s1 * c2 * c3 + c1 * s2 * s3;
-            y = c1 * s2 * c3 + s1 * c2 * s3;
-            z = c1 * c2 * s3 - s1 * s2 * c3;
-            w = c1 * c2 * c3 - s1 * s2 * s3;
+            _x = s1 * c2 * c3 + c1 * s2 * s3;
+            _y = c1 * s2 * c3 + s1 * c2 * s3;
+            _z = c1 * c2 * s3 - s1 * s2 * c3;
+            _w = c1 * c2 * c3 - s1 * s2 * s3;
         }
         else if (orderStr == "XZY")
         {
-            x = s1 * c2 * c3 - c1 * s2 * s3;
-            y = c1 * s2 * c3 - s1 * c2 * s3;
-            z = c1 * c2 * s3 + s1 * s2 * c3;
-            w = c1 * c2 * c3 + s1 * s2 * s3;
+            _x = s1 * c2 * c3 - c1 * s2 * s3;
+            _y = c1 * s2 * c3 - s1 * c2 * s3;
+            _z = c1 * c2 * s3 + s1 * s2 * c3;
+            _w = c1 * c2 * c3 + s1 * s2 * s3;
         }
 
         if (update) onChangeCallback();
@@ -123,10 +178,10 @@ class Quaternion
         var halfAngle = angle / 2;
         var s = Math.sin(halfAngle);
 
-        x = axis.x * s;
-        y = axis.y * s;
-        z = axis.z * s;
-        w = Math.cos(halfAngle);
+        _x = axis.x * s;
+        _y = axis.y * s;
+        _z = axis.z * s;
+        _w = Math.cos(halfAngle);
 
         onChangeCallback();
 
@@ -146,34 +201,34 @@ class Quaternion
         if (trace > 0)
         {
             var s = 0.5 / Math.sqrt(trace + 1.0);
-            w = 0.25 / s;
-            x = (m32 - m23) * s;
-            y = (m13 - m31) * s;
-            z = (m21 - m12) * s;
+            _w = 0.25 / s;
+            _x = (m32 - m23) * s;
+            _y = (m13 - m31) * s;
+            _z = (m21 - m12) * s;
         }
         else if (m11 > m22 && m11 > m33)
         {
             var s = 2.0 * Math.sqrt(1.0 + m11 - m22 - m33);
-            w = (m32 - m23) / s;
-            x = 0.25 * s;
-            y = (m12 + m21) / s;
-            z = (m13 + m31) / s;
+            _w = (m32 - m23) / s;
+            _x = 0.25 * s;
+            _y = (m12 + m21) / s;
+            _z = (m13 + m31) / s;
         }
         else if (m22 > m33)
         {
             var s = 2.0 * Math.sqrt(1.0 + m22 - m11 - m33);
-            w = (m13 - m31) / s;
-            x = (m12 + m21) / s;
-            y = 0.25 * s;
-            z = (m23 + m32) / s;
+            _w = (m13 - m31) / s;
+            _x = (m12 + m21) / s;
+            _y = 0.25 * s;
+            _z = (m23 + m32) / s;
         }
         else
         {
             var s = 2.0 * Math.sqrt(1.0 + m33 - m11 - m22);
-            w = (m21 - m12) / s;
-            x = (m13 + m31) / s;
-            y = (m23 + m32) / s;
-            z = 0.25 * s;
+            _w = (m21 - m12) / s;
+            _x = (m13 + m31) / s;
+            _y = (m23 + m32) / s;
+            _z = 0.25 * s;
         }
 
         onChangeCallback();
@@ -191,25 +246,25 @@ class Quaternion
 
             if (Math.abs(vFrom.x) > Math.abs(vFrom.z))
             {
-                x = -vFrom.y;
-                y = vFrom.x;
-                z = 0;
-                w = r;
+                _x = -vFrom.y;
+                _y = vFrom.x;
+                _z = 0;
+                _w = r;
             }
             else
             {
-                x = 0;
-                y = -vFrom.z;
-                z = vFrom.y;
-                w = r;
+                _x = 0;
+                _y = -vFrom.z;
+                _z = vFrom.y;
+                _w = r;
             }
         }
         else
         {
-            x = vFrom.y * vTo.z - vFrom.z * vTo.y;
-            y = vFrom.z * vTo.x - vFrom.x * vTo.z;
-            z = vFrom.x * vTo.y - vFrom.y * vTo.x;
-            w = r;
+            _x = vFrom.y * vTo.z - vFrom.z * vTo.y;
+            _y = vFrom.z * vTo.x - vFrom.x * vTo.z;
+            _z = vFrom.x * vTo.y - vFrom.y * vTo.x;
+            _w = r;
         }
 
         return normalize();
@@ -245,9 +300,9 @@ class Quaternion
 
     public function conjugate():Quaternion
     {
-        x *= -1;
-        y *= -1;
-        z *= -1;
+        _x *= -1;
+        _y *= -1;
+        _z *= -1;
 
         onChangeCallback();
 
@@ -256,17 +311,17 @@ class Quaternion
 
     public function dot(v:Quaternion):Float
     {
-        return x * v.x + y * v.y + z * v.z + w * v.w;
+        return _x * v._x + _y * v._y + _z * v._z + _w * v._w;
     }
 
     public function lengthSq():Float
     {
-        return x * x + y * y + z * z + w * w;
+        return _x * _x + _y * _y + _z * _z + _w * _w;
     }
 
     public function length():Float
     {
-        return Math.sqrt(x * x + y * y + z * z + w * w);
+        return Math.sqrt(_x * _x + _y * _y + _z * _z + _w * _w);
     }
 
     public function normalize():Quaternion
@@ -275,18 +330,18 @@ class Quaternion
 
         if (l == 0)
         {
-            x = 0;
-            y = 0;
-            z = 0;
-            w = 1;
+            _x = 0;
+            _y = 0;
+            _z = 0;
+            _w = 1;
         }
         else
         {
             l = 1 / l;
-            x *= l;
-            y *= l;
-            z *= l;
-            w *= l;
+            _x *= l;
+            _y *= l;
+            _z *= l;
+            _w *= l;
         }
 
         onChangeCallback();
@@ -306,13 +361,13 @@ class Quaternion
 
     public function multiplyQuaternions(a:Quaternion, b:Quaternion):Quaternion
     {
-        var qax = a.x, qay = a.y, qaz = a.z, qaw = a.w;
-        var qbx = b.x, qby = b.y, qbz = b.z, qbw = b.w;
+        var qax = a._x, qay = a._y, qaz = a._z, qaw = a._w;
+        var qbx = b._x, qby = b._y, qbz = b._z, qbw = b._w;
 
-        x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
-        y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
-        z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
-        w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+        _x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+        _y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+        _z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+        _w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
 
         onChangeCallback();
 
@@ -324,16 +379,16 @@ class Quaternion
         if (t == 0) return this;
         if (t == 1) return copy(qb);
 
-        var x0 = x, y0 = y, z0 = z, w0 = w;
+        var x0 = _x, y0 = _y, z0 = _z, w0 = _w;
 
-        var cosHalfTheta = w0 * qb.w + x0 * qb.x + y0 * qb.y + z0 * qb.z;
+        var cosHalfTheta = w0 * qb._w + x0 * qb._x + y0 * qb._y + z0 * qb._z;
 
         if (cosHalfTheta < 0)
         {
-            w = -qb.w;
-            x = -qb.x;
-            y = -qb.y;
-            z = -qb.z;
+            _w = -qb._w;
+            _x = -qb._x;
+            _y = -qb._y;
+            _z = -qb._z;
             cosHalfTheta = -cosHalfTheta;
         }
         else
@@ -343,10 +398,10 @@ class Quaternion
 
         if (cosHalfTheta >= 1.0)
         {
-            w = w0;
-            x = x0;
-            y = y0;
-            z = z0;
+            _w = w0;
+            _x = x0;
+            _y = y0;
+            _z = z0;
             return this;
         }
 
@@ -355,10 +410,10 @@ class Quaternion
         if (sqrSinHalfTheta <= 0.0000001)
         {
             var s = 1 - t;
-            w = s * w0 + t * w;
-            x = s * x0 + t * x;
-            y = s * y0 + t * y;
-            z = s * z0 + t * z;
+            _w = s * w0 + t * _w;
+            _x = s * x0 + t * _x;
+            _y = s * y0 + t * _y;
+            _z = s * z0 + t * _z;
             normalize();
             return this;
         }
@@ -368,10 +423,10 @@ class Quaternion
         var ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta;
         var ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
 
-        w = w0 * ratioA + w * ratioB;
-        x = x0 * ratioA + x * ratioB;
-        y = y0 * ratioA + y * ratioB;
-        z = z0 * ratioA + z * ratioB;
+        _w = w0 * ratioA + _w * ratioB;
+        _x = x0 * ratioA + _x * ratioB;
+        _y = y0 * ratioA + _y * ratioB;
+        _z = z0 * ratioA + _z * ratioB;
 
         onChangeCallback();
 
@@ -401,15 +456,15 @@ class Quaternion
 
     public function equals(q:Quaternion):Bool
     {
-        return q.x == x && q.y == y && q.z == z && q.w == w;
+        return q._x == _x && q._y == _y && q._z == _z && q._w == _w;
     }
 
     public function fromArray(array:Array<Float>, offset:Int = 0):Quaternion
     {
-        x = array[offset];
-        y = array[offset + 1];
-        z = array[offset + 2];
-        w = array[offset + 3];
+        _x = array[offset];
+        _y = array[offset + 1];
+        _z = array[offset + 2];
+        _w = array[offset + 3];
 
         onChangeCallback();
 
@@ -419,10 +474,10 @@ class Quaternion
     public function toArray(?array:Array<Float>, offset:Int = 0):Array<Float>
     {
         if (array == null) array = [];
-        array[offset] = x;
-        array[offset + 1] = y;
-        array[offset + 2] = z;
-        array[offset + 3] = w;
+        array[offset] = _x;
+        array[offset + 1] = _y;
+        array[offset + 2] = _z;
+        array[offset + 3] = _w;
         return array;
     }
 
