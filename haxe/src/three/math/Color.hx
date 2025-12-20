@@ -30,17 +30,19 @@ class Color
         if (g == null && b == null)
         {
             // r is hex, string, or Color
-            if (Std.isOfType(r, Int))
-            {
-                setHex(r);
-            }
-            else if (Std.isOfType(r, Color))
+            if (Std.isOfType(r, Color))
             {
                 copy(r);
             }
             else if (Std.isOfType(r, String))
             {
                 setStyle(r);
+            }
+            else if (Std.isOfType(r, Int) || Std.isOfType(r, Float))
+            {
+                // In JavaScript, all numbers are floats, so check both Int and Float
+                // Treat any number as a hex color value
+                setHex(Std.int(r));
             }
         }
         else

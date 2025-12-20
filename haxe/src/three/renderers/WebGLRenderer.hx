@@ -268,6 +268,13 @@ class WebGLRenderer
         // Collect lights from scene (pass camera for view space transformation)
         collectLights(scene, camera);
 
+        // Handle scene background color
+        if (scene.background != null && Std.isOfType(scene.background, Color))
+        {
+            var bgColor:Color = cast scene.background;
+            _clearColor.copy(bgColor);
+        }
+
         // Clear if needed
         if (autoClear)
         {
@@ -386,6 +393,7 @@ class WebGLRenderer
     }
 
     private static var _debugMeshOnce:Bool = false;
+    private static var _debugMeshCount:Int = 0;
 
     private function renderMesh(mesh:Mesh, scene:Scene, camera:Camera):Void
     {
@@ -402,16 +410,12 @@ class WebGLRenderer
         var programKey = getMaterialKey(material);
         var program = getProgram(programKey);
 
-        // Debug output once
-        if (!_debugMeshOnce)
+        // Debug output for first few meshes
+        if (_debugMeshCount < 5)
         {
-            _debugMeshOnce = true;
-            trace("=== MESH DEBUG ===");
+            trace("=== MESH DEBUG #" + _debugMeshCount + " ===");
             trace("Material type: " + material.type);
             trace("Program key: " + programKey);
-            trace("Is Phong: " + Std.isOfType(material, MeshPhongMaterial));
-            trace("Is Lambert: " + Std.isOfType(material, MeshLambertMaterial));
-            trace("Is Basic: " + Std.isOfType(material, MeshBasicMaterial));
         }
         gl.useProgram(program.program);
 
@@ -434,11 +438,10 @@ class WebGLRenderer
         else if (Std.isOfType(material, MeshBasicMaterial))
         {
             var basicMat:MeshBasicMaterial = cast material;
-            // Debug: log color values once
-            if (!_debugMeshOnce)
+            // Debug: log color values
+            if (_debugMeshCount < 5)
             {
                 trace("Basic color RGB: " + basicMat.color.r + ", " + basicMat.color.g + ", " + basicMat.color.b);
-                trace("Basic opacity: " + basicMat.opacity);
                 trace("uColor location: " + program.uniforms.get("uColor"));
             }
             gl.uniform3f(program.uniforms.get("uColor"), basicMat.color.r, basicMat.color.g, basicMat.color.b);
@@ -448,13 +451,12 @@ class WebGLRenderer
         // Get or create buffers
         var buffers = getGeometryBuffers(geometry);
 
-        // Debug: log buffer info once
-        if (!_debugMeshOnce)
+        // Debug: log buffer info
+        if (_debugMeshCount < 5)
         {
             trace("=== BUFFER DEBUG ===");
-            trace("Position buffer: " + buffers.position);
-            trace("Normal buffer: " + buffers.normal);
-            trace("Index buffer: " + buffers.index);
+            trace("Position buffer exists: " + (buffers.position != null));
+            trace("Normal buffer exists: " + (buffers.normal != null));
             trace("Vertex count: " + buffers.vertexCount);
             trace("Index count: " + buffers.indexCount);
             trace("aPosition loc: " + program.attributes.get("aPosition"));
@@ -486,21 +488,34 @@ class WebGLRenderer
         if (buffers.index != null)
         {
             gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffers.index);
-            if (!_debugMeshOnce) trace("Drawing " + buffers.indexCount + " indices");
+            if (_debugMeshCount < 5) trace("Drawing " + buffers.indexCount + " indices (indexed)");
             gl.drawElements(GL.TRIANGLES, buffers.indexCount, GL.UNSIGNED_SHORT, 0);
         }
         else
         {
-            if (!_debugMeshOnce) trace("Drawing " + buffers.vertexCount + " vertices");
+            if (_debugMeshCount < 5) trace("Drawing " + buffers.vertexCount + " vertices (array)");
             gl.drawArrays(GL.TRIANGLES, 0, buffers.vertexCount);
         }
 
-        // Mark debug done after first mesh render completes
-        _debugMeshOnce = true;
+        // Increment debug counter
+        _debugMeshCount++;
     }
+
+    private static var _debugPhongOnce:Bool = false;
 
     private function setPhongUniforms(program:ProgramInfo, material:MeshPhongMaterial, mesh:Mesh, camera:Camera):Void
     {
+        // Debug Phong uniforms once
+        if (!_debugPhongOnce)
+        {
+            _debugPhongOnce = true;
+            trace("=== PHONG MATERIAL DEBUG ===");
+            trace("Color RGB: " + material.color.r + ", " + material.color.g + ", " + material.color.b);
+            trace("Specular RGB: " + material.specular.r + ", " + material.specular.g + ", " + material.specular.b);
+            trace("Shininess: " + material.shininess);
+            trace("uColor location: " + program.uniforms.get("uColor"));
+        }
+
         // Colors
         gl.uniform3f(program.uniforms.get("uColor"), material.color.r, material.color.g, material.color.b);
         gl.uniform3f(program.uniforms.get("uSpecular"), material.specular.r, material.specular.g, material.specular.b);
@@ -524,8 +539,23 @@ class WebGLRenderer
         setLightUniforms(program);
     }
 
+    private static var _debugLambertOnce:Bool = false;
+
     private function setLambertUniforms(program:ProgramInfo, material:MeshLambertMaterial, mesh:Mesh, camera:Camera):Void
     {
+        // Debug Lambert uniforms once
+        if (!_debugLambertOnce)
+        {
+            _debugLambertOnce = true;
+            trace("=== LAMBERT MATERIAL DEBUG ===");
+            trace("Color RGB: " + material.color.r + ", " + material.color.g + ", " + material.color.b);
+            trace("uColor location: " + program.uniforms.get("uColor"));
+            trace("uModelViewMatrix location: " + program.uniforms.get("uModelViewMatrix"));
+            trace("uNormalMatrix location: " + program.uniforms.get("uNormalMatrix"));
+            // Check if normalMatrix is valid
+            trace("NormalMatrix[0-2]: " + mesh.normalMatrix.elements[0] + ", " + mesh.normalMatrix.elements[1] + ", " + mesh.normalMatrix.elements[2]);
+        }
+
         // Colors
         gl.uniform3f(program.uniforms.get("uColor"), material.color.r, material.color.g, material.color.b);
         gl.uniform3f(program.uniforms.get("uEmissive"),
@@ -542,8 +572,28 @@ class WebGLRenderer
         setLightUniforms(program);
     }
 
+    private static var _debugLightUniformOnce:Bool = false;
+
     private function setLightUniforms(program:ProgramInfo):Void
     {
+        // Debug light uniforms once
+        if (!_debugLightUniformOnce)
+        {
+            _debugLightUniformOnce = true;
+            trace("=== LIGHT UNIFORM DEBUG ===");
+            trace("uAmbientLight location: " + program.uniforms.get("uAmbientLight"));
+            trace("Ambient value: " + _ambientLight.r + ", " + _ambientLight.g + ", " + _ambientLight.b);
+            trace("uNumDirectionalLights location: " + program.uniforms.get("uNumDirectionalLights"));
+            trace("Directional count: " + _directionalLights.length);
+            if (_directionalLights.length > 0)
+            {
+                var light = _directionalLights[0];
+                trace("Dir[0] direction: " + light.direction.x + ", " + light.direction.y + ", " + light.direction.z);
+                trace("Dir[0] color*intensity: " + (light.color.r * light.intensity) + ", " + (light.color.g * light.intensity) + ", " + (light.color.b * light.intensity));
+            }
+            trace("Point count: " + _pointLights.length);
+        }
+
         // Ambient light
         gl.uniform3f(program.uniforms.get("uAmbientLight"), _ambientLight.r, _ambientLight.g, _ambientLight.b);
 
