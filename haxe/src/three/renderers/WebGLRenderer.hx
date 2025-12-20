@@ -282,6 +282,7 @@ class WebGLRenderer
     #if js
     // Store view matrix for light transformation
     private var _viewMatrix:Matrix4;
+    private static var _debugLightOnce:Bool = false;
 
     private function collectLights(scene:Scene, camera:Camera):Void
     {
@@ -295,6 +296,16 @@ class WebGLRenderer
 
         // Traverse scene to collect lights
         collectLightsFromObject(scene);
+
+        // Debug output once
+        if (!_debugLightOnce)
+        {
+            _debugLightOnce = true;
+            trace("=== LIGHT DEBUG ===");
+            trace("Ambient: " + _ambientLight.r + ", " + _ambientLight.g + ", " + _ambientLight.b);
+            trace("Directional count: " + _directionalLights.length);
+            trace("Point count: " + _pointLights.length);
+        }
     }
 
     private function collectLightsFromObject(object:Object3D):Void
@@ -374,6 +385,8 @@ class WebGLRenderer
         }
     }
 
+    private static var _debugMeshOnce:Bool = false;
+
     private function renderMesh(mesh:Mesh, scene:Scene, camera:Camera):Void
     {
         var geometry = mesh.geometry;
@@ -388,6 +401,18 @@ class WebGLRenderer
         // Determine material type and get program
         var programKey = getMaterialKey(material);
         var program = getProgram(programKey);
+
+        // Debug output once
+        if (!_debugMeshOnce)
+        {
+            _debugMeshOnce = true;
+            trace("=== MESH DEBUG ===");
+            trace("Material type: " + material.type);
+            trace("Program key: " + programKey);
+            trace("Is Phong: " + Std.isOfType(material, MeshPhongMaterial));
+            trace("Is Lambert: " + Std.isOfType(material, MeshLambertMaterial));
+            trace("Is Basic: " + Std.isOfType(material, MeshBasicMaterial));
+        }
         gl.useProgram(program.program);
 
         // Set common uniforms

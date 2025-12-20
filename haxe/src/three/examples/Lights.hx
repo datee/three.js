@@ -122,11 +122,33 @@ class Lights
         renderer.setSize(Browser.window.innerWidth, Browser.window.innerHeight);
     }
 
+    static var frameCount:Int = 0;
+
     static function animate(timestamp:Float):Void
     {
         Browser.window.requestAnimationFrame(animate);
 
         time = timestamp * 0.001;
+
+        // Debug: log info once
+        if (frameCount == 0)
+        {
+            trace("=== DEBUG INFO ===");
+            trace("Scene children: " + scene.children.length);
+            trace("Camera position: " + camera.position.x + ", " + camera.position.y + ", " + camera.position.z);
+            trace("cubeBasic visible: " + cubeBasic.visible);
+            trace("cubeBasic.material type: " + cubeBasic.material.type);
+            trace("cubeLambert.material type: " + cubeLambert.material.type);
+            trace("cubePhong.material type: " + cubePhong.material.type);
+
+            // Check geometry
+            var geom = cubeBasic.geometry;
+            var posAttr = geom.getAttribute("position");
+            var normAttr = geom.getAttribute("normal");
+            trace("Geometry position count: " + (posAttr != null ? Std.string(posAttr.count) : "null"));
+            trace("Geometry normal count: " + (normAttr != null ? Std.string(normAttr.count) : "null"));
+        }
+        frameCount++;
 
         // Rotate all cubes
         cubeBasic.rotation.x = time * 0.5;
