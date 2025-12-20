@@ -434,12 +434,32 @@ class WebGLRenderer
         else if (Std.isOfType(material, MeshBasicMaterial))
         {
             var basicMat:MeshBasicMaterial = cast material;
+            // Debug: log color values once
+            if (!_debugMeshOnce)
+            {
+                trace("Basic color RGB: " + basicMat.color.r + ", " + basicMat.color.g + ", " + basicMat.color.b);
+                trace("Basic opacity: " + basicMat.opacity);
+                trace("uColor location: " + program.uniforms.get("uColor"));
+            }
             gl.uniform3f(program.uniforms.get("uColor"), basicMat.color.r, basicMat.color.g, basicMat.color.b);
             gl.uniform1f(program.uniforms.get("uOpacity"), basicMat.opacity);
         }
 
         // Get or create buffers
         var buffers = getGeometryBuffers(geometry);
+
+        // Debug: log buffer info once
+        if (!_debugMeshOnce)
+        {
+            trace("=== BUFFER DEBUG ===");
+            trace("Position buffer: " + buffers.position);
+            trace("Normal buffer: " + buffers.normal);
+            trace("Index buffer: " + buffers.index);
+            trace("Vertex count: " + buffers.vertexCount);
+            trace("Index count: " + buffers.indexCount);
+            trace("aPosition loc: " + program.attributes.get("aPosition"));
+            trace("aNormal loc: " + program.attributes.get("aNormal"));
+        }
 
         // Bind position buffer
         gl.bindBuffer(GL.ARRAY_BUFFER, buffers.position);
@@ -466,12 +486,17 @@ class WebGLRenderer
         if (buffers.index != null)
         {
             gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, buffers.index);
+            if (!_debugMeshOnce) trace("Drawing " + buffers.indexCount + " indices");
             gl.drawElements(GL.TRIANGLES, buffers.indexCount, GL.UNSIGNED_SHORT, 0);
         }
         else
         {
+            if (!_debugMeshOnce) trace("Drawing " + buffers.vertexCount + " vertices");
             gl.drawArrays(GL.TRIANGLES, 0, buffers.vertexCount);
         }
+
+        // Mark debug done after first mesh render completes
+        _debugMeshOnce = true;
     }
 
     private function setPhongUniforms(program:ProgramInfo, material:MeshPhongMaterial, mesh:Mesh, camera:Camera):Void
