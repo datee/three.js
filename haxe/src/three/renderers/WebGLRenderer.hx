@@ -709,32 +709,34 @@ class WebGLRenderer
                 // Start with ambient and emissive
                 vec3 outgoingLight = uEmissive + diffuseColor * uAmbientLight;
 
-                // Add directional lights
+                // Add directional lights (avoid break with uniform condition)
                 for (int i = 0; i < 4; i++) {
-                    if (i >= uNumDirectionalLights) break;
-                    vec3 lightDir = normalize(uDirectionalLights[i].direction);
-                    float dotNL = max(dot(normal, lightDir), 0.0);
-                    outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
+                    if (i < uNumDirectionalLights) {
+                        vec3 lightDir = normalize(uDirectionalLights[i].direction);
+                        float dotNL = max(dot(normal, lightDir), 0.0);
+                        outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
+                    }
                 }
 
-                // Add point lights
+                // Add point lights (avoid break with uniform condition)
                 for (int i = 0; i < 4; i++) {
-                    if (i >= uNumPointLights) break;
-                    vec3 lightVector = uPointLights[i].position + vViewPosition;
-                    float lightDistance = length(lightVector);
-                    vec3 lightDir = normalize(lightVector);
+                    if (i < uNumPointLights) {
+                        vec3 lightVector = uPointLights[i].position + vViewPosition;
+                        float lightDistance = length(lightVector);
+                        vec3 lightDir = normalize(lightVector);
 
-                    float dotNL = max(dot(normal, lightDir), 0.0);
+                        float dotNL = max(dot(normal, lightDir), 0.0);
 
-                    // Attenuation
-                    float attenuation = 1.0;
-                    if (uPointLights[i].distance > 0.0) {
-                        float distanceFactor = lightDistance / uPointLights[i].distance;
-                        attenuation = max(1.0 - distanceFactor, 0.0);
-                        attenuation *= attenuation;
+                        // Attenuation
+                        float attenuation = 1.0;
+                        if (uPointLights[i].distance > 0.0) {
+                            float distanceFactor = lightDistance / uPointLights[i].distance;
+                            attenuation = max(1.0 - distanceFactor, 0.0);
+                            attenuation *= attenuation;
+                        }
+
+                        outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
                     }
-
-                    outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
                 }
 
                 gl_FragColor = vec4(outgoingLight, uOpacity);
@@ -806,47 +808,49 @@ class WebGLRenderer
                 vec3 outgoingLight = uEmissive + diffuseColor * uAmbientLight;
                 vec3 specularSum = vec3(0.0);
 
-                // Add directional lights
+                // Add directional lights (avoid break with uniform condition)
                 for (int i = 0; i < 4; i++) {
-                    if (i >= uNumDirectionalLights) break;
-                    vec3 lightDir = normalize(uDirectionalLights[i].direction);
+                    if (i < uNumDirectionalLights) {
+                        vec3 lightDir = normalize(uDirectionalLights[i].direction);
 
-                    // Diffuse
-                    float dotNL = max(dot(normal, lightDir), 0.0);
-                    outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
+                        // Diffuse
+                        float dotNL = max(dot(normal, lightDir), 0.0);
+                        outgoingLight += diffuseColor * uDirectionalLights[i].color * dotNL;
 
-                    // Specular (Blinn-Phong)
-                    vec3 halfDir = normalize(lightDir + viewDir);
-                    float dotNH = max(dot(normal, halfDir), 0.0);
-                    float specularFactor = pow(dotNH, uShininess);
-                    specularSum += uSpecular * uDirectionalLights[i].color * specularFactor * dotNL;
+                        // Specular (Blinn-Phong)
+                        vec3 halfDir = normalize(lightDir + viewDir);
+                        float dotNH = max(dot(normal, halfDir), 0.0);
+                        float specularFactor = pow(dotNH, uShininess);
+                        specularSum += uSpecular * uDirectionalLights[i].color * specularFactor * dotNL;
+                    }
                 }
 
-                // Add point lights
+                // Add point lights (avoid break with uniform condition)
                 for (int i = 0; i < 4; i++) {
-                    if (i >= uNumPointLights) break;
-                    vec3 lightVector = uPointLights[i].position + vViewPosition;
-                    float lightDistance = length(lightVector);
-                    vec3 lightDir = normalize(lightVector);
+                    if (i < uNumPointLights) {
+                        vec3 lightVector = uPointLights[i].position + vViewPosition;
+                        float lightDistance = length(lightVector);
+                        vec3 lightDir = normalize(lightVector);
 
-                    float dotNL = max(dot(normal, lightDir), 0.0);
+                        float dotNL = max(dot(normal, lightDir), 0.0);
 
-                    // Attenuation
-                    float attenuation = 1.0;
-                    if (uPointLights[i].distance > 0.0) {
-                        float distanceFactor = lightDistance / uPointLights[i].distance;
-                        attenuation = max(1.0 - distanceFactor, 0.0);
-                        attenuation *= attenuation;
+                        // Attenuation
+                        float attenuation = 1.0;
+                        if (uPointLights[i].distance > 0.0) {
+                            float distanceFactor = lightDistance / uPointLights[i].distance;
+                            attenuation = max(1.0 - distanceFactor, 0.0);
+                            attenuation *= attenuation;
+                        }
+
+                        // Diffuse
+                        outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
+
+                        // Specular (Blinn-Phong)
+                        vec3 halfDir = normalize(lightDir + viewDir);
+                        float dotNH = max(dot(normal, halfDir), 0.0);
+                        float specularFactor = pow(dotNH, uShininess);
+                        specularSum += uSpecular * uPointLights[i].color * specularFactor * dotNL * attenuation;
                     }
-
-                    // Diffuse
-                    outgoingLight += diffuseColor * uPointLights[i].color * dotNL * attenuation;
-
-                    // Specular (Blinn-Phong)
-                    vec3 halfDir = normalize(lightDir + viewDir);
-                    float dotNH = max(dot(normal, halfDir), 0.0);
-                    float specularFactor = pow(dotNH, uShininess);
-                    specularSum += uSpecular * uPointLights[i].color * specularFactor * dotNL * attenuation;
                 }
 
                 outgoingLight += specularSum;
