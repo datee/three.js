@@ -416,12 +416,26 @@ class WebGLRenderer
             trace("=== MESH DEBUG #" + _debugMeshCount + " ===");
             trace("Material type: " + material.type);
             trace("Program key: " + programKey);
+            trace("Mesh position: " + mesh.position.x + ", " + mesh.position.y + ", " + mesh.position.z);
         }
         gl.useProgram(program.program);
 
         // Set common uniforms
         var mvpMatrix = new Matrix4();
         mvpMatrix.multiplyMatrices(_projScreenMatrix, mesh.matrixWorld);
+
+        // Debug MVP matrix
+        if (_debugMeshCount < 2)
+        {
+            trace("=== MVP MATRIX DEBUG ===");
+            trace("MVP[0-3]: " + mvpMatrix.elements[0] + ", " + mvpMatrix.elements[1] + ", " + mvpMatrix.elements[2] + ", " + mvpMatrix.elements[3]);
+            trace("MVP[4-7]: " + mvpMatrix.elements[4] + ", " + mvpMatrix.elements[5] + ", " + mvpMatrix.elements[6] + ", " + mvpMatrix.elements[7]);
+            trace("MVP[8-11]: " + mvpMatrix.elements[8] + ", " + mvpMatrix.elements[9] + ", " + mvpMatrix.elements[10] + ", " + mvpMatrix.elements[11]);
+            trace("MVP[12-15]: " + mvpMatrix.elements[12] + ", " + mvpMatrix.elements[13] + ", " + mvpMatrix.elements[14] + ", " + mvpMatrix.elements[15]);
+            trace("ProjScreen[0-3]: " + _projScreenMatrix.elements[0] + ", " + _projScreenMatrix.elements[1] + ", " + _projScreenMatrix.elements[2] + ", " + _projScreenMatrix.elements[3]);
+            trace("MeshWorld[12-14]: " + mesh.matrixWorld.elements[12] + ", " + mesh.matrixWorld.elements[13] + ", " + mesh.matrixWorld.elements[14]);
+        }
+
         gl.uniformMatrix4fv(program.uniforms.get("uMVPMatrix"), false, new js.lib.Float32Array(mvpMatrix.elements));
 
         // Set material-specific uniforms
@@ -573,6 +587,7 @@ class WebGLRenderer
     }
 
     private static var _debugLightUniformOnce:Bool = false;
+    private static var _debugGeomOnce:Bool = false;
 
     private function setLightUniforms(program:ProgramInfo):Void
     {
@@ -1012,6 +1027,14 @@ class WebGLRenderer
         var positionAttr = geometry.getAttribute("position");
         if (positionAttr != null)
         {
+            // Debug: show first vertex position
+            if (!_debugGeomOnce && positionAttr.array.length >= 3)
+            {
+                _debugGeomOnce = true;
+                trace("=== GEOMETRY DEBUG ===");
+                trace("First vertex: " + positionAttr.array[0] + ", " + positionAttr.array[1] + ", " + positionAttr.array[2]);
+                trace("Position array length: " + positionAttr.array.length);
+            }
             buffers.position = gl.createBuffer();
             gl.bindBuffer(GL.ARRAY_BUFFER, buffers.position);
             gl.bufferData(GL.ARRAY_BUFFER, new js.lib.Float32Array(positionAttr.array), GL.STATIC_DRAW);
