@@ -265,8 +265,8 @@ class WebGLRenderer
         // Compute projection-view matrix
         _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
 
-        // Collect lights from scene
-        collectLights(scene);
+        // Collect lights from scene (pass camera for view space transformation)
+        collectLights(scene, camera);
 
         // Clear if needed
         if (autoClear)
@@ -280,12 +280,18 @@ class WebGLRenderer
     }
 
     #if js
-    private function collectLights(scene:Scene):Void
+    // Store view matrix for light transformation
+    private var _viewMatrix:Matrix4;
+
+    private function collectLights(scene:Scene, camera:Camera):Void
     {
         // Reset light state
         _ambientLight.setRGB(0, 0, 0);
         _directionalLights = [];
         _pointLights = [];
+
+        // Store view matrix for transforming lights to view space
+        _viewMatrix = camera.matrixWorldInverse;
 
         // Traverse scene to collect lights
         collectLightsFromObject(scene);
@@ -307,12 +313,16 @@ class WebGLRenderer
             // Update target's matrix (it's not in the scene graph)
             light.target.updateMatrixWorld();
 
+            // Get direction in world space
             var direction = new Vector3();
             direction.setFromMatrixPosition(light.matrixWorld);
             var targetPos = new Vector3();
             targetPos.setFromMatrixPosition(light.target.matrixWorld);
             direction.sub(targetPos);
             direction.normalize();
+
+            // Transform direction to view space (rotation only)
+            direction.transformDirection(_viewMatrix);
 
             _directionalLights.push({
                 color: light.color,
@@ -325,6 +335,9 @@ class WebGLRenderer
             var light:PointLight = cast object;
             var position = new Vector3();
             position.setFromMatrixPosition(light.matrixWorld);
+
+            // Transform position to view space
+            position.applyMatrix4(_viewMatrix);
 
             _pointLights.push({
                 color: light.color,
